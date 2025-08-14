@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Nova ERP AI – Auth API
+  version: 1.0.0
+  description: Authentication & authorization endpoints for Nova ERP AI. Implements JWT (access/refresh), logout, password recovery, rate limiting, and observability headers.
+
+servers:
+  - url: https://api.novaerp.ai/auth
+    description: Production
+  - url: https://staging.novaerp.ai/auth
+    description: Staging
+  - url: http://localhost:8081
+    description: Local Dev
+
+tags:
+  - name: Authentication
+    description: Login, logout, token refresh
+  - name: Password Recovery
+    description: Password reset via email token
+  - name: Introspection
+    description: Token introspection and public keys
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  headers:
+    X-Request-Id:
+      description: Correlation ID for tracing a request end-to-end
+      schema: { type: string, example: "a3e1b2c4-5d6f-7a8b-9c0d-ef1234567890" }
+    X-RateLimit-Limit:
+      description: The maximum number of requests allowed in the current window
+      schema: { type: integer, example: 100 }
+    X-RateLimit-Remaining:
+      description: The number of requests left for the current window
+      schema: { type: integer, example: 87 }
+    X-RateLimit-Reset:
+      description: Seconds until the rate limit resets
+      schema: { type: integer, example: 52 }
+
+  schemas:
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details
+      properties:
+        type: { type: string, format: uri, example: "https://api.novaerp.ai/problems/invalid-credentials" }
+        title: { type: string, example: "Invalid credentials" }
+        status: { type: integer, example: 401 }
+        detail: { type: string, example: "Username or password is incorrect." }
+        instance: { type: string, example: "/auth/login" }
+        traceId: { type: string, example: "a3e1b2c4-5d6f-7a8b-9c0d-ef1234567890" }
+      required: [title, status]
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, example: "john.doe" }
+        password: { type: string, format: password, example: "P@ssw0rd!" }
+      additionalProperties: false
+    TokenResponse:
+      type: object
+      properties:
+        access_token: { type: string, description: "JWT access token" }
+        refresh_token: { type: string, description: "Opaque or JWT refresh token" }
+        token_type: { type: string, example: "Bearer" }
+        expires_in: { type: integer, example: 900, description: "Access token TTL in seconds" }
+        _links:
+          type: object
+          properties:
+            self: { $ref: '#/components/schemas/Link' }
+            refresh: { $ref: '#/components/schemas/Link' }
+            logout: { $ref: '#/components/schemas/Link' }
+      required: [access_token, token_type, expires_in]
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+      additionalProperties: false
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          description: Optional refresh token to revoke alongside the access token
+      additionalProperties: false
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, example: "john.doe@example.com" }
+      additionalProperties: false
+    ResetPasswordRequest:
+      type: object
+      required: [reset_token, new_password]
+      properties:
+        reset_token: { type: string, description: "Time-bound token sent via email" }
+        new_password: { type: string, format: password, minLength: 12 }
+      additionalProperties: false
+    IntrospectRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string }
+      additionalProperties: false
+    IntrospectResponse:
+      type: object
+      properties:
+        active: { type: boolean }
+        sub: { type: string, description: "User ID/subject" }
+        username: { type: string }
+        exp: { type: integer }
+        iat: { type: integer }
+        iss: { type: string }
+        scope: { type: string, example: "read:users write:users" }
+        roles:
+          type: array
+          items: { type: string, example: "ROLE_ADMIN" }
+    JWKS:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            description: "JSON Web Key per RFC 7517"
+            additionalProperties: true
+    Link:
+      type: object
+      properties:
+        href: { type: string, example: "/auth/refresh" }
+        method: { type: string, example: "POST" }
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate and obtain access/refresh tokens
+      description: Issues short-lived access token and longer-lived refresh token.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Successful authentication
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/X-Request-Id' }
+            X-RateLimit-Limit: { $ref: '#/components/headers/X-RateLimit-Limit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/X-RateLimit-Remaining' }
+            X-RateLimit-Reset: { $ref: '#/components/headers/X-RateLimit-Reset' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400':
+          description: Validation error
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '401':
+          description: Invalid credentials
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Reset: { $ref: '#/components/headers/X-RateLimit-Reset' }
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+        '503':
+          description: Auth service unavailable
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /auth/logout:
+    post:
+      summary: Invalidate current access token (and optional refresh token)
+      tags: [Authentication]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LogoutRequest' }
+      responses:
+        '204':
+          description: Successfully logged out
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/X-Request-Id' }
+        '401':
+          description: Unauthorized (missing/invalid token)
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /auth/refresh:
+    post:
+      summary: Obtain a new access token using a refresh token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: New access token issued
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/X-Request-Id' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401':
+          description: Invalid or expired refresh token
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /auth/password/forgot:
+    post:
+      summary: Request password reset email
+      tags: [Password Recovery]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ForgotPasswordRequest' }
+      responses:
+        '202':
+          description: Reset email accepted for processing
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/X-Request-Id' }
+        '400':
+          description: Invalid email payload
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /auth/password/reset:
+    post:
+      summary: Reset password with reset token
+      tags: [Password Recovery]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetPasswordRequest' }
+      responses:
+        '204':
+          description: Password updated successfully
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/X-Request-Id' }
+        '400':
+          description: Invalid or expired reset token / weak password
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /auth/introspect:
+    post:
+      summary: Introspect a token (for internal services)
+      tags: [Introspection]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntrospectRequest' }
+      responses:
+        '200':
+          description: Token metadata
+          content: { application/json: { schema: { $ref: '#/components/schemas/IntrospectResponse' } } }
+        '400':
+          description: Invalid request
+          content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+
+  /auth/.well-known/jwks.json:
+    get:
+      summary: Get JWKS public keys for JWT verification
+      tags: [Introspection]
+      responses:
+        '200':
+          description: JWKS keys
+          headers:
+            Cache-Control:
+              schema: { type: string, example: "public, max-age=86400" }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JWKS' }

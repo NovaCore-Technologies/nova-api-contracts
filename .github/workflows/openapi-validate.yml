@@ -1,0 +1,46 @@
+name: OpenAPI Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**/openapi.yaml'
+      - '**/openapi.yml'
+      - 'common/**/*.yaml'
+      - 'common/**/*.yml'
+
+jobs:
+  validate-openapi:
+    name: Validate OpenAPI Files
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Chequear el código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configurar Node.js para usar openapi-cli
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 3. Instalar la CLI oficial de OpenAPI
+      - name: Install OpenAPI CLI
+        run: npm install -g @redocly/cli@latest
+
+      # 4. Buscar y validar todos los archivos openapi.yaml o openapi.yml
+      - name: Validate OpenAPI specs
+        run: |
+          echo "🔍 Buscando contratos OpenAPI..."
+          find . -type f \( -name "openapi.yaml" -o -name "openapi.yml" \) | while read spec; do
+            echo "✅ Validando: $spec"
+            npx @redocly/cli lint "$spec" --format=stylish || exit 1
+          done
+
+      # 5. Resultado final
+      - name: Summary
+        if: success()
+        run: echo "🎉 Todos los archivos OpenAPI son válidos."
