@@ -27,6 +27,7 @@
 <!-- Logs de la validación para cada archivo modificado -->
 ```bash
 $ npx @redocly/cli lint auth-api/1.0.1/openapi.yaml
+```
 ✅ No errors found
 
 ## 🏷 Checklist de etiquetado (post-merge)

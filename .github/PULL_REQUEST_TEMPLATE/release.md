@@ -34,6 +34,7 @@ Incluye cambios ya aprobados en `develop` y congelados para publicación.
 <!-- Pegar logs de validación -->
 ```bash
 $ npx @redocly/cli lint auth-api/1.0.0/openapi.yaml
+```
 ✅ No errors found
 
 ## 📎 Issues o tareas relacionadas

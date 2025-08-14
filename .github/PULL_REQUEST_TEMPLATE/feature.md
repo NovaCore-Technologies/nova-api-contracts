@@ -35,7 +35,7 @@ Este PR implementa la funcionalidad **[E1-US-001 Login en auth-api]**, incluyend
 <!-- Pegar aquí capturas o logs de la ejecución de validación -->
 ```bash
 $ npx @redocly/cli lint auth-api/1.0.0/openapi.yaml
-...
+```
 No errors or warnings found. ✅
 
 ## 📎 Issues relacionadas
