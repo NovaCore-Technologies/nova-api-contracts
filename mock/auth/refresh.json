@@ -1,0 +1,19 @@
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_in": 900,
+    "token_type": "Bearer",
+    "_links": {
+        "additionalProp1": {
+            "href": "/api/v1/auth/me",
+            "method": "GET"
+        },
+        "additionalProp2": {
+            "href": "/api/v1/auth/me",
+            "method": "GET"
+        },
+        "additionalProp3": {
+            "href": "/api/v1/auth/me",
+            "method": "GET"
+        }
+    }
+}

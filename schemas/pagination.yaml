@@ -1,0 +1,24 @@
+openapi: 3.0.3
+info:
+  title: Pagination Schemas
+  version: 1.0.0
+  description: Standard pagination models for list endpoints
+
+components:
+  schemas:
+    PageMeta:
+      type: object
+      description: Pagination metadata
+      properties:
+        page: { type: integer, example: 1 }
+        size: { type: integer, example: 20 }
+        totalElements: { type: integer, example: 153 }
+        totalPages: { type: integer, example: 8 }
+
+    PagedResponse:
+      type: object
+      description: Base structure for paged list responses
+      properties:
+        self: { $ref: './common.yaml#/components/schemas/Link' }
+        next: { $ref: './common.yaml#/components/schemas/Link' }
+        prev: { $ref: './common.yaml#/components/schemas/Link' }

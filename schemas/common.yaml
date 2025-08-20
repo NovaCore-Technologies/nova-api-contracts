@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info:
+  title: Common Schemas
+  version: 1.0.0
+  description: Shared schemas across Nova ERP AI APIs
+
+components:
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    Email:
+      type: string
+      format: email
+      example: "john.doe@example.com"
+
+    DateTime:
+      type: string
+      format: date-time
+      example: "2025-08-20T15:30:00Z"
+
+    Link:
+      type: object
+      description: HATEOAS-style link object
+      properties:
+        href: { type: string, example: "/api/v1/users/123" }
+        method: { type: string, example: "GET" }
+
+    Ack:
+      type: object
+      description: Generic acknowledgment schema
+      properties:
+        status: { type: string, example: "accepted" }
+        _links:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Link'

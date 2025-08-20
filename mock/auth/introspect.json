@@ -1,0 +1,18 @@
+{
+    "active": true,
+    "subject": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "username": "john.doe",
+    "scope": [
+        "string"
+    ],
+    "exp": 1755667200,
+    "iat": 1755660000,
+    "roles": ["ADMIN"],
+    "iss": "string",
+    "_links": {
+        "me": {
+            "href": "/api/v1/auth/me",
+            "method": "GET"
+        }
+    }
+}
