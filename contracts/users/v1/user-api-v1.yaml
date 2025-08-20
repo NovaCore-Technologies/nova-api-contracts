@@ -5,7 +5,10 @@ info:
   description: >
     User and role management API for Nova ERP AI. Implements REST resource
     style with pagination, filtering, sorting, HATEOAS links and Problem Details.
-
+  contact:
+    name: NovaCore Technologies
+    url: https://github.com/SpDkMn01
+    email: pdiazstam@gmail.com
 servers:
   - url: https://api.novaerp.ai/api/v1
     description: Production
@@ -26,6 +29,7 @@ paths:
     get:
       operationId: listUsers
       summary: List users
+      description: Returns the list users resource.
       tags: [Users]
       parameters:
         - $ref: '#/components/parameters/PageNumber'
@@ -48,6 +52,7 @@ paths:
     post:
       operationId: createUser
       summary: Create a new user
+      description: Returns the user created.
       tags: [Users]
       requestBody:
         required: true
@@ -67,12 +72,13 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '409': { $ref: '#/components/responses/Conflict' }
 
-  /users/{userId}:
+  /users/{user-id}:
     parameters:
       - $ref: '#/components/parameters/UserId'
     get:
       operationId: getUser
       summary: Get user by id
+      description: Returns the user resource for the provided ID.
       tags: [Users]
       responses:
         '200':
@@ -84,6 +90,7 @@ paths:
     patch:
       operationId: updateUser
       summary: Partially update user
+      description: Returns the user updated.
       tags: [Users]
       requestBody:
         required: true
@@ -101,18 +108,20 @@ paths:
     delete:
       operationId: deleteUser
       summary: Delete user
+      description: User deleted.
       tags: [Users]
       responses:
         '204':
           description: Deleted
         '404': { $ref: '#/components/responses/NotFound' }
 
-  /users/{userId}/roles:
+  /users/{user-id}/roles:
     parameters:
       - $ref: '#/components/parameters/UserId'
     get:
       operationId: listUserRoles
       summary: List roles assigned to a user
+      description: Returns the list roles assigned to a user.
       tags: [Roles]
       responses:
         '200':
@@ -146,6 +155,7 @@ paths:
     get:
       operationId: listRoles
       summary: List all available roles
+      description: Returns the roles list resource.
       tags: [Roles]
       responses:
         '200':
@@ -165,7 +175,7 @@ components:
   parameters:
     UserId:
       in: path
-      name: userId
+      name: user-id
       required: true
       schema: { type: string, format: uuid }
     PageNumber:
