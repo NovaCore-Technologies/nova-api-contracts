@@ -48,4 +48,4 @@ jobs:
       - name: Spectral Lint
         run: |
           echo "🔍 Running Spectral validation..."
-          npx @stoplight/spectral-cli lint "contracts/**/*.yaml"
+          npx @stoplight/spectral-cli lint "contracts/**/*.yaml" --ruleset .spectral.yaml
