@@ -28,6 +28,9 @@ tags:
   - name: Introspection
     description: Token and session introspection endpoints
 
+security:
+  - BearerAuth: []
+
 paths:
   /auth/login:
     post:
@@ -37,6 +40,8 @@ paths:
         Authenticates a user using username/email and password and returns
         short-lived access token (JWT) and long-lived refresh token.
       tags: [Authentication]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
       requestBody:
         required: true
         content:
@@ -92,6 +97,8 @@ paths:
       security:
         - BearerAuth: []
       tags: [Authentication]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
       requestBody:
         required: false
         content:
@@ -113,6 +120,8 @@ paths:
       summary: Obtain a new access token using a refresh token
       description: Obtain a new access token using a refresh token
       tags: [Authentication]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
       requestBody:
         required: true
         content:
@@ -141,6 +150,8 @@ paths:
       security:
         - BearerAuth: []
       tags: [Authentication]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
       responses:
         '200':
           description: Current session info
@@ -158,6 +169,8 @@ paths:
       description: >
         Validates a token and returns metadata such as subject, scopes, expiry and status.
       tags: [Introspection]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
       security:
         - BearerAuth: []
       requestBody:
@@ -183,6 +196,8 @@ paths:
       description: >
         Sends a password reset email with a one-time token. Idempotent.
       tags: [Password Recovery]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
       requestBody:
         required: true
         content:
@@ -207,6 +222,8 @@ paths:
       summary: Complete password reset
       description: Complete password reset
       tags: [Password Recovery]
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
       requestBody:
         required: true
         content:
