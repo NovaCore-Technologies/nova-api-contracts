@@ -46,6 +46,6 @@ jobs:
 
       # 5. Validate with Spectral
       - name: Spectral Lint
-        uses: stoplightio/spectral-action@v1
-        with:
-          file_glob: 'contracts/**/*.yaml'
+        run: |
+          echo "🔍 Running Spectral validation..."
+          npx @stoplight/spectral-cli lint "contracts/**/*.yaml" --ruleset .spectral.yaml

@@ -1,0 +1,51 @@
+extends: ["spectral:oas", "spectral:asyncapi"]
+
+rules:
+  # Reglas de naming
+  operation-description: true
+  operation-operationId: true
+  operation-tags: true
+
+  # Paths deben usar kebab-case
+  path-kebab-case:
+    description: "Path names should be kebab-case."
+    message: "Path '{{property}}' is not kebab-case."
+    severity: error
+    given: "$.paths[*]~"
+    then:
+      function: pattern
+      functionOptions:
+        match: ^(/[a-z0-9]+(-[a-z0-9]+)*)*$
+
+  # Los schemas deben tener ejemplos
+  schema-example:
+    description: "Schemas should have examples defined"
+    message: "Schema '{{property}}' must define an example"
+    severity: warn
+    given: "$.components.schemas.*"
+    then:
+      field: example
+      function: truthy
+
+  # Response 200 siempre debe existir
+  response-200:
+    description: "All GET operations must have a 200 response"
+    message: "GET operation is missing 200 response"
+    severity: error
+    given: "$.paths.*.get.responses"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          type: object
+          required: ["200"]
+
+  # Security debe estar definido en todos los endpoints
+  operation-security-defined:
+    description: "Operations must define security requirements"
+    message: "Missing security requirements"
+    severity: error
+    given: "$.paths.*.*"
+    then:
+      field: security
+      function: truthy
