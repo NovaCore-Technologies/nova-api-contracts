@@ -1,0 +1,277 @@
+openapi: 3.0.3
+info:
+  title: Nova ERP AI – User API
+  version: 1.0.0
+  description: >
+    User and role management API for Nova ERP AI. Implements REST resource
+    style with pagination, filtering, sorting, HATEOAS links and Problem Details.
+
+servers:
+  - url: https://api.novaerp.ai/api/v1
+    description: Production
+  - url: https://staging.api.novaerp.ai/api/v1
+    description: Staging
+  - url: http://localhost:8081/api/v1
+    description: Local
+
+tags:
+  - name: Users
+  - name: Roles
+
+security:
+  - BearerAuth: []
+
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Sort'
+        - name: filter
+          in: query
+          description: Filter by username/email (contains, case-insensitive)
+          schema: { type: string, maxLength: 128 }
+      responses:
+        '200':
+          description: Paged list of users
+          headers:
+            X-Request-Id:
+              schema: { type: string, format: uuid }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+    post:
+      operationId: createUser
+      summary: Create a new user
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserCreate' }
+      responses:
+        '201':
+          description: User created
+          headers:
+            Location:
+              description: URI of the created resource
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResource' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      operationId: getUser
+      summary: Get user by id
+      tags: [Users]
+      responses:
+        '200':
+          description: User resource
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResource' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateUser
+      summary: Partially update user
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserUpdate' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResource' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteUser
+      summary: Delete user
+      tags: [Users]
+      responses:
+        '204':
+          description: Deleted
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /users/{userId}/roles:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      operationId: listUserRoles
+      summary: List roles assigned to a user
+      tags: [Roles]
+      responses:
+        '200':
+          description: Role list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleList'
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: replaceUserRoles
+      summary: Replace all roles for a user
+      description: Overwrites current roles with the provided list (idempotent).
+      tags: [Roles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignRolesRequest' }
+      responses:
+        '200':
+          description: Updated role assignments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleList'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /roles:
+    get:
+      operationId: listRoles
+      summary: List all available roles
+      tags: [Roles]
+      responses:
+        '200':
+          description: Role catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleList'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      in: path
+      name: userId
+      required: true
+      schema: { type: string, format: uuid }
+    PageNumber:
+      in: query
+      name: page
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      in: query
+      name: size
+      schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+    Sort:
+      in: query
+      name: sort
+      description: >
+        Sort by fields, e.g. "username,asc" or "createdAt,desc".
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Validation or parsing error
+      content:
+        application/problem+json:
+          schema: { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema: { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+    Conflict:
+      description: Conflicting state (e.g., duplicate email)
+      content:
+        application/problem+json:
+          schema: { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { $ref: '../../../schemas/common.yaml#/components/schemas/UUID' }
+        username: { type: string, minLength: 3, maxLength: 64 }
+        email: { $ref: '../../../schemas/common.yaml#/components/schemas/Email' }
+        status: { type: string, enum: [ACTIVE, DISABLED] }
+        createdAt: { $ref: '../../../schemas/common.yaml#/components/schemas/DateTime' }
+        updatedAt: { $ref: '../../../schemas/common.yaml#/components/schemas/DateTime' }
+
+    UserCreate:
+      type: object
+      required: [username, email, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 64 }
+        email: { $ref: '../../../schemas/common.yaml#/components/schemas/Email' }
+        password: { type: string, format: password, minLength: 12 }
+
+    UserUpdate:
+      type: object
+      properties:
+        email: { $ref: '../../../schemas/common.yaml#/components/schemas/Email' }
+        status: { type: string, enum: [ACTIVE, DISABLED] }
+        password: { type: string, format: password, minLength: 12 }
+
+    UserResource:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            _links:
+              type: object
+              properties:
+                self: { $ref: '../../../schemas/common.yaml#/components/schemas/Link' }
+                update: { $ref: '../../../schemas/common.yaml#/components/schemas/Link' }
+                delete: { $ref: '../../../schemas/common.yaml#/components/schemas/Link' }
+
+    UserPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/UserResource' }
+        meta:
+          $ref: '../../../schemas/pagination.yaml#/components/schemas/PageMeta'
+        _links:
+          $ref: '../../../schemas/pagination.yaml#/components/schemas/PagedResponse'
+
+    Role:
+      type: object
+      properties:
+        id: { $ref: '../../../schemas/common.yaml#/components/schemas/UUID' }
+        name: { type: string, example: "admin" }
+        description: { type: string }
+
+    RoleList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Role' }
+        meta:
+          $ref: '../../../schemas/pagination.yaml#/components/schemas/PageMeta'
+        links:
+          $ref: '../../../schemas/pagination.yaml#/components/schemas/PagedResponse'
+
+    AssignRolesRequest:
+      type: object
+      required: [roleIds]
+      properties:
+        roleIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }

@@ -1,0 +1,70 @@
+{
+    "data": [
+        {
+            "id": "123e4567-e89b-12d3-a456-426614174000",
+            "username": "john.doe",
+            "email": "john.doe@example.com",
+            "roles": ["ADMIN"],
+            "status": "ACTIVE",
+            "created_at": "2025-08-20T10:15:30Z",
+            "updatedAt": "2025-08-20T15:30:00Z",
+            "_links": {
+                "self": {
+                    "href": "/api/v1/users/123",
+                    "method": "GET"
+                },
+                "update": {
+                    "href": "/api/v1/users/123",
+                    "method": "GET"
+                },
+                "delete": {
+                    "href": "/api/v1/users/123",
+                    "method": "GET"
+                }
+            }
+        },
+        {
+            "id": "223e4567-e89b-12d3-a456-426614174000",
+            "username": "jane.smith",
+            "email": "jane.smith@example.com",
+            "roles": ["USER"],
+            "status": "ACTIVE",
+            "created_at": "2025-08-19T09:00:00Z",
+            "updatedAt": "2025-08-20T15:30:00Z",
+            "_links": {
+                "self": {
+                    "href": "/api/v1/users/123",
+                    "method": "GET"
+                },
+                "update": {
+                    "href": "/api/v1/users/123",
+                    "method": "GET"
+                },
+                "delete": {
+                    "href": "/api/v1/users/123",
+                    "method": "GET"
+                }
+            }
+        }
+    ],
+    "meta": {
+      "page": 1,
+      "size": 20,
+      "totalElements": 153,
+      "totalPages": 8
+    },
+    "_links": {
+        "self": {
+            "href": "/api/v1/users/123",
+            "method": "GET"
+        },
+        "next": {
+            "href": "/api/v1/users/123",
+            "method": "GET"
+        },
+        "prev": {
+            "href": "/api/v1/users/123",
+            "method": "GET"
+        }
+    }
+}

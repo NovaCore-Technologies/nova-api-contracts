@@ -1,0 +1,26 @@
+openapi: 3.0.3
+info:
+  title: Error Schemas
+  version: 1.0.0
+  description: Problem Details (RFC 7807) standard error responses
+
+components:
+  schemas:
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details
+      properties:
+        type: { type: string, format: uri, example: "https://novaerp.ai/errors/invalid-request" }
+        title: { type: string, example: "Invalid request" }
+        status: { type: integer, example: 400 }
+        detail: { type: string, example: "The username field is required." }
+        instance: { type: string, example: "/api/v1/auth/login" }
+        errors:
+          type: array
+          description: Field-level validation errors
+          items:
+            type: object
+            properties:
+              field: { type: string, example: "username" }
+              message: { type: string, example: "must not be blank" }
+      required: [title, status]

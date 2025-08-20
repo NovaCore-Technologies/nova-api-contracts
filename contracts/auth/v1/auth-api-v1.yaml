@@ -1,0 +1,393 @@
+openapi: 3.0.3
+info:
+  title: Nova ERP AI – Auth API
+  version: 1.0.0
+  description: >
+    Authentication and authorization endpoints for Nova ERP AI.
+    Follows REST API Design Rulebook conventions. Includes JWT-based auth,
+    refresh tokens, password recovery, introspection, HATEOAS links and
+    RFC7807 Problem Details for errors.
+
+servers:
+  - url: https://api.novaerp.ai/api/v1
+    description: Production
+  - url: https://staging.api.novaerp.ai/api/v1
+    description: Staging
+  - url: http://localhost:8080/api/v1
+    description: Local
+
+tags:
+  - name: Authentication
+    description: Login, logout, token refresh and user session info
+  - name: Password Recovery
+    description: Forgot/reset password flows
+  - name: Introspection
+    description: Token and session introspection endpoints
+
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      summary: Authenticate and obtain access/refresh tokens
+      description: >
+        Authenticates a user using username/email and password and returns
+        short-lived access token (JWT) and long-lived refresh token.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              default:
+                value: { username: "john.doe", password: "P@ssw0rd!" }
+      responses:
+        '200':
+          description: Successful authentication
+          headers:
+            X-Request-Id:
+              schema: { type: string, format: uuid }
+              description: Correlation id for this request
+            RateLimit-Limit:
+              schema: { type: integer }
+            RateLimit-Remaining:
+              schema: { type: integer }
+            RateLimit-Reset:
+              schema: { type: integer, description: "Seconds until reset" }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+              examples:
+                default:
+                  value:
+                    access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    expires_in: 900
+                    refresh_token: "def50200b2..."
+                    token_type: "Bearer"
+                    _links:
+                      self: { href: "/api/v1/auth/login", method: "POST" }
+                      refresh: { href: "/api/v1/auth/refresh", method: "POST" }
+                      me: { href: "/api/v1/auth/me", method: "GET" }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Invalidate current access token and revoke refresh token
+      description: >
+        Invalidates the calling session. If a refresh token is provided it will be revoked.
+      security:
+        - BearerAuth: []
+      tags: [Authentication]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Logged out
+          headers:
+            X-Request-Id:
+              schema: { type: string, format: uuid }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      operationId: refresh
+      summary: Obtain a new access token using a refresh token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/me:
+    get:
+      operationId: me
+      summary: Get the authenticated principal
+      description: Returns information about the current authenticated user.
+      security:
+        - BearerAuth: []
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Current session info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionInfo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/introspect:
+    post:
+      operationId: introspect
+      summary: Validate and inspect a token
+      description: >
+        Validates a token and returns metadata such as subject, scopes, expiry and status.
+      tags: [Introspection]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntrospectRequest'
+      responses:
+        '200':
+          description: Token metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntrospectResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/password/forgot:
+    post:
+      operationId: passwordForgot
+      summary: Start password recovery
+      description: >
+        Sends a password reset email with a one-time token. Idempotent.
+      tags: [Password Recovery]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Reset email accepted for delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ack'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/password/reset:
+    post:
+      operationId: passwordReset
+      summary: Complete password reset
+      tags: [Password Recovery]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Password updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '410':
+          description: Reset token expired
+          content:
+            application/problem+json:
+              schema:  { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    RequestIdHeader:
+      in: header
+      name: X-Request-Id
+      schema: { type: string, format: uuid }
+      required: false
+      description: Correlation id for tracing
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/problem+json:
+          schema:  { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+    Unauthorized:
+      description: Unauthorized
+      headers:
+        WWW-Authenticate:
+          schema: { type: string }
+          description: Bearer challenge
+      content:
+        application/problem+json:
+          schema:  { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+    TooManyRequests:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema: { type: integer, description: "Seconds to wait" }
+      content:
+        application/problem+json:
+          schema:  { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/problem+json:
+          schema:  { $ref: '../../../schemas/error.yaml#/components/schemas/Problem' }
+
+  schemas:
+    Link:
+      type: object
+      properties:
+        href: { type: string, example: "/api/v1/auth/me" }
+        method: { type: string, example: "GET" }
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+        password:
+          type: string
+          format: password
+          minLength: 8
+
+    AuthTokens:
+      type: object
+      properties:
+        access_token: { type: string }
+        expires_in: { type: integer, example: 900 }
+        refresh_token: { type: string }
+        token_type: { type: string, example: "Bearer" }
+        _links:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Link'
+      required: [access_token, refresh_token, token_type]
+
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 32
+
+    AccessTokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        expires_in: { type: integer, example: 900 }
+        token_type: { type: string, example: "Bearer" }
+        _links:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Link'
+      required: [access_token, token_type]
+
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          description: Optional refresh token to revoke
+
+    SessionInfo:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        username: { type: string }
+        email: { type: string, format: email }
+        roles:
+          type: array
+          items: { type: string, example: "admin" }
+        issued_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        _links:
+          type: object
+          properties:
+            self: { $ref: '#/components/schemas/Link' }
+            logout: { $ref: '#/components/schemas/Link' }
+
+    IntrospectRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string }
+
+    IntrospectResponse:
+      type: object
+      properties:
+        active: { type: boolean }
+        subject: { type: string, format: uuid }
+        username: { type: string }
+        scope:
+          type: array
+          items: { type: string }
+        exp: { type: integer, description: "Epoch seconds" }
+        iat: { type: integer }
+        iss: { type: string }
+        _links:
+          type: object
+          properties:
+            me: { $ref: '#/components/schemas/Link' }
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+          minLength: 32
+        new_password:
+          type: string
+          format: password
+          minLength: 12
+
+    Ack:
+      type: object
+      properties:
+        status: { type: string, example: "accepted" }
+        message: { type: string, example: "Password reset link has been sent to your email address" }
+        _links:
+          type: object
+          properties:
+            self: { $ref: '#/components/schemas/Link' }

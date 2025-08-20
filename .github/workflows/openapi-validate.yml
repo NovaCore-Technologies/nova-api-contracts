@@ -1,4 +1,4 @@
-name: OpenAPI Validation
+name: Validate and Publish OpenAPI Contracts
 
 on:
   pull_request:
@@ -8,39 +8,44 @@ on:
     paths:
       - '**/openapi.yaml'
       - '**/openapi.yml'
-      - 'common/**/*.yaml'
-      - 'common/**/*.yml'
+      - 'contracts/**/*.yaml'
+      - 'contracts/**/*.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/openapi.yaml'
+      - '**/openapi.yml'
+      - 'contracts/**/*.yaml'
+      - 'contracts/**/*.yml'
 
 jobs:
-  validate-openapi:
-    name: Validate OpenAPI Files
+  validate:
+    name: Validate OpenAPI Specs
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Chequear el código
+      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Configurar Node.js para usar openapi-cli
+      # 2. Setup Node.js (para Redocly CLI)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 3. Instalar la CLI oficial de OpenAPI
-      - name: Install OpenAPI CLI
+      # 3. Install Redocly CLI
+      - name: Install Redocly CLI
         run: npm install -g @redocly/cli@latest
 
-      # 4. Buscar y validar todos los archivos openapi.yaml o openapi.yml
-      - name: Validate OpenAPI specs
+      # 4. Validate with Redocly
+      - name: Redocly Lint
         run: |
-          echo "🔍 Buscando contratos OpenAPI..."
-          find . -type f \( -name "openapi.yaml" -o -name "openapi.yml" \) | while read spec; do
-            echo "✅ Validando: $spec"
-            npx @redocly/cli lint "$spec" --format=stylish || exit 1
-          done
+          echo "🔍 Running Redocly validation..."
+          npx @redocly/cli lint "contracts/**/*.yaml" --format=stylish
 
-      # 5. Resultado final
-      - name: Summary
-        if: success()
-        run: echo "🎉 Todos los archivos OpenAPI son válidos."
+      # 5. Validate with Spectral
+      - name: Spectral Lint
+        uses: stoplightio/spectral-action@v1
+        with:
+          file_glob: 'contracts/**/*.yaml'
