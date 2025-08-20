@@ -28,9 +28,6 @@ tags:
   - name: Introspection
     description: Token and session introspection endpoints
 
-security:
-  - BearerAuth: []
-
 paths:
   /auth/login:
     post:
